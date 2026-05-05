@@ -81,22 +81,27 @@ export const HabitGrid: React.FC<HabitGridProps> = ({ habits, onToggle, weekDate
   );
 
   return (
-    <div className="glass-card p-6">
+    <div className="glass-card p-6 glow-border">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
-        <h2 className="text-xl font-bold flex items-center gap-2">
-          <Icons.LayoutGrid className="w-5 h-5 text-cyan-400" />
-          Habit Calendar
-        </h2>
+        <div className="space-y-1">
+          <h2 className="text-xl font-black flex items-center gap-3 uppercase tracking-[0.2em] text-white">
+            <Icons.LayoutGrid className="w-5 h-5 text-purple-400" />
+            Habit Protocol
+          </h2>
+          <p className="text-[9px] font-bold text-slate-500 uppercase tracking-[0.3em] ml-8">
+            Long-term consistency monitoring
+          </p>
+        </div>
         
-        <div className="flex items-center bg-white/5 p-1 rounded-full border border-white/5">
+        <div className="flex items-center bg-white/[0.02] p-1 rounded-lg border border-white/5">
           {(['Weekly', 'Monthly', 'Yearly'] as ViewMode[]).map((mode) => (
             <button
               key={mode}
               onClick={() => setView(mode)}
               className={cn(
-                "px-4 py-1.5 rounded-full text-xs font-bold transition-all",
+                "px-5 py-2 rounded-md text-[10px] font-black uppercase tracking-widest transition-all",
                 view === mode 
-                  ? "bg-cyan-500 text-slate-950 shadow-lg shadow-cyan-500/20" 
+                  ? "bg-white text-black shadow-lg" 
                   : "text-slate-500 hover:text-slate-300"
               )}
             >
@@ -110,13 +115,13 @@ export const HabitGrid: React.FC<HabitGridProps> = ({ habits, onToggle, weekDate
         <div className="min-w-max space-y-4 select-none">
           {/* Shared Header Row */}
           <div className="flex items-center gap-6 px-4 mb-2">
-            <div className="min-w-[200px] invisible" /> {/* Spacer for habit info */}
+            <div className="min-w-[220px] invisible" /> {/* Spacer for habit info */}
             <div className="flex-1">
               {view === 'Weekly' && (
                 <div className="flex items-center justify-between gap-4 px-2">
                   {DAYS.map((day) => (
                     <div key={day} className="w-12 text-center">
-                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{day}</span>
+                      <span className="text-[9px] font-black text-slate-600 uppercase tracking-[0.2em]">{day}</span>
                     </div>
                   ))}
                 </div>
@@ -125,7 +130,7 @@ export const HabitGrid: React.FC<HabitGridProps> = ({ habits, onToggle, weekDate
                 <div className="flex items-center gap-2 px-2">
                   {monthDates.map((_, idx) => (
                     <div key={idx} className="w-4 text-center">
-                      <span className="text-[9px] font-bold text-slate-600">{idx + 1}</span>
+                      <span className="text-[9px] font-black text-slate-700">{idx + 1}</span>
                     </div>
                   ))}
                 </div>
@@ -134,13 +139,13 @@ export const HabitGrid: React.FC<HabitGridProps> = ({ habits, onToggle, weekDate
                 <div className="flex items-start gap-6 px-2">
                   {yearMonths.map((month) => (
                     <div key={month.name} className="flex flex-col items-center flex-shrink-0">
-                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{month.name}</span>
+                      <span className="text-[9px] font-black text-slate-600 uppercase tracking-[0.2em]">{month.name}</span>
                     </div>
                   ))}
                 </div>
               )}
             </div>
-            <div className="min-w-[100px] invisible" /> {/* Spacer for progress */}
+            <div className="min-w-[120px] invisible" /> {/* Spacer for progress */}
           </div>
 
           {/* Habit Rows */}
@@ -154,14 +159,18 @@ export const HabitGrid: React.FC<HabitGridProps> = ({ habits, onToggle, weekDate
                 key={habit.id}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
+                whileHover={{ 
+                  backgroundColor: "rgba(255, 255, 255, 0.02)",
+                  borderColor: "rgba(168, 85, 247, 0.2)"
+                }}
                 transition={{ delay: habitIdx * 0.05 }}
-                className="p-4 rounded-xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.04] transition-all"
+                className="p-5 rounded-xl bg-white/[0.01] border border-white/5 transition-all group/row"
               >
                 <div className="flex items-center gap-6">
                   {/* Habit Info */}
-                  <div className="min-w-[200px] flex items-center gap-3">
+                  <div className="min-w-[220px] flex items-center gap-4">
                     <div className={cn(
-                      "p-2.5 rounded-xl bg-white/5",
+                      "p-3 rounded-xl bg-black border border-white/5 shadow-inner transition-transform group-hover/row:scale-110",
                       habit.category === 'Health' && "text-emerald-400",
                       habit.category === 'Learning' && "text-cyan-400",
                       habit.category === 'Mindset' && "text-purple-400",
@@ -170,12 +179,12 @@ export const HabitGrid: React.FC<HabitGridProps> = ({ habits, onToggle, weekDate
                     )}>
                       <IconComponent className="w-5 h-5" />
                     </div>
-                    <div className="flex flex-col">
-                      <span className="font-bold text-sm text-white truncate max-w-[120px]">{habit.name}</span>
-                      <div className="flex items-center gap-2">
-                        <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">{habit.category}</span>
-                        <div className="flex items-center gap-1 text-[10px] text-orange-400 font-bold">
-                          <Icons.Flame className="w-3 h-3" />
+                    <div className="flex flex-col gap-0.5">
+                      <span className="font-black text-xs text-white uppercase tracking-wider group-hover/row:text-purple-400 transition-colors truncate max-w-[140px]">{habit.name}</span>
+                      <div className="flex items-center gap-3">
+                        <span className="text-[8px] text-slate-600 font-black uppercase tracking-[0.2em]">{habit.category}</span>
+                        <div className="flex items-center gap-1 text-[8px] text-purple-400 font-black bg-purple-400/5 px-1.5 py-0.5 rounded border border-purple-500/10">
+                          <Icons.Flame className="w-2.5 h-2.5 fill-purple-400" />
                           {habit.streak}
                         </div>
                       </div>
@@ -215,7 +224,7 @@ export const HabitGrid: React.FC<HabitGridProps> = ({ habits, onToggle, weekDate
                                   onClick={() => onToggle(habit.id, date)}
                                   className={cn(
                                     "w-3 h-3 rounded-[2px] cursor-pointer transition-all hover:scale-125",
-                                    (habit.history || {})[date] === 'completed' ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.3)]" :
+                                    (habit.history || {})[date] === 'completed' ? "bg-purple-500 shadow-[0_0_8px_rgba(168,85,247,0.3)]" :
                                     (habit.history || {})[date] === 'skipped' ? "bg-rose-500" :
                                     "bg-white/5 hover:bg-white/10"
                                   )}
@@ -229,15 +238,18 @@ export const HabitGrid: React.FC<HabitGridProps> = ({ habits, onToggle, weekDate
                   </div>
 
                   {/* Progress */}
-                  <div className="min-w-[100px] flex flex-col items-end gap-1">
-                    <span className="text-xs font-bold text-emerald-400">
-                      {completedCount} Total
-                    </span>
-                    <div className="w-20 h-1 bg-white/10 rounded-full overflow-hidden">
+                  <div className="min-w-[120px] flex flex-col items-end gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[9px] font-black text-slate-600 uppercase tracking-widest">Efficiency</span>
+                      <span className="text-[10px] font-black text-purple-400">
+                        {completedCount}
+                      </span>
+                    </div>
+                    <div className="w-24 h-1 bg-black rounded-full overflow-hidden border border-white/5">
                       <motion.div
                         initial={{ width: 0 }}
                         animate={{ width: `${Math.min(100, (completedCount / 30) * 100)}%` }}
-                        className="h-full bg-emerald-500"
+                        className="h-full bg-gradient-to-r from-purple-600 to-purple-400 shadow-[0_0_10px_rgba(168,85,247,0.3)]"
                       />
                     </div>
                   </div>

@@ -8,6 +8,7 @@
   --font-serif: "Playfair Display", serif;
   --font-mono: "JetBrains Mono", monospace;
   --font-syne: "Syne", sans-serif;
+  --font-tactic: "Tactic Sans", "Syne", sans-serif;
 }
 
 * {
@@ -15,13 +16,22 @@
 }
 
 @layer base {
+  :root {
+    --chart-tooltip-bg: #1e1b4b;
+    --chart-tooltip-border: rgba(255, 255, 255, 0.2);
+  }
+
+  .black-darken-theme {
+    --chart-tooltip-bg: #000000;
+    --chart-tooltip-border: rgba(255, 255, 255, 0.05);
+  }
+
   html {
     @apply overflow-hidden;
     height: 100%;
   }
   body {
     @apply bg-slate-950 text-slate-50 antialiased h-full overflow-x-hidden overflow-y-auto;
-    background: radial-gradient(circle at top left, #0f172a, #1e1b4b, #312e81);
     background-attachment: fixed;
     margin: 0;
     scroll-behavior: smooth;
@@ -31,10 +41,31 @@
   body.light-theme {
     @apply bg-slate-50 text-slate-900;
   }
+
+  body.black-darken-theme {
+    @apply bg-black text-white;
+  }
 }
 
 .light-theme .glass-card {
   @apply bg-white border-slate-200 shadow-sm;
+}
+
+.black-darken-theme .glass-card {
+  @apply bg-black border-white/5 shadow-none;
+}
+
+.black-darken-theme .bg-white\/5 {
+  @apply bg-white/[0.01];
+}
+
+.black-darken-theme .bg-white\/10 {
+  @apply bg-white/[0.02];
+}
+
+.black-darken-theme .border-white\/10,
+.black-darken-theme .border-white\/5 {
+  @apply border-white/[0.03];
 }
 
 .light-theme .text-slate-400,
@@ -93,11 +124,115 @@
   @apply bg-white/10 hover:bg-white/20;
 }
 
+.black-darken-theme .habit-box-empty {
+  @apply bg-white/[0.02] hover:bg-white/[0.04];
+}
+
 .habit-box-completed {
   @apply bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.4)];
 }
 
 .habit-box-skipped {
   @apply bg-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.4)];
+}
+
+/* Cool Effects */
+.glow-border {
+  @apply relative;
+}
+
+.glow-border::after {
+  content: '';
+  @apply absolute inset-0 rounded-[inherit] border border-purple-500/20 pointer-events-none;
+  box-shadow: 0 0 15px rgba(168, 85, 247, 0.1);
+}
+
+.scanline {
+  width: 100%;
+  height: 100px;
+  z-index: 5;
+  background: linear-gradient(
+    0deg,
+    rgba(0, 0, 0, 0) 0%,
+    rgba(255, 255, 255, 0.02) 50%,
+    rgba(0, 0, 0, 0) 100%
+  );
+  opacity: 0.1;
+  position: absolute;
+  bottom: 100%;
+  animation: scanline 10s linear infinite;
+}
+
+@keyframes scanline {
+  0% { bottom: 100%; }
+  80% { bottom: 100%; }
+  100% { bottom: -100px; }
+}
+
+.noise {
+  position: fixed;
+  top: -50%;
+  left: -50%;
+  right: -50%;
+  bottom: -50%;
+  width: 200%;
+  height: 200%;
+  background: transparent url('http://assets.iceable.com/img/noise-transparent.png') repeat 0 0;
+  background-repeat: repeat;
+  animation: noise 0.2s infinite;
+  opacity: .03;
+  visibility: visible;
+  z-index: 1;
+  pointer-events: none;
+}
+
+@keyframes noise {
+  0% { transform: translate(0,0) }
+  10% { transform: translate(-5%,-5%) }
+  20% { transform: translate(-10%,5%) }
+  30% { transform: translate(5%,-10%) }
+  40% { transform: translate(-5%,15%) }
+  50% { transform: translate(-10%,5%) }
+  60% { transform: translate(15%,0) }
+  70% { transform: translate(0,10%) }
+  80% { transform: translate(-15%,0) }
+  90% { transform: translate(10%,5%) }
+  100% { transform: translate(5%,0) }
+}
+
+.glitch-text {
+  position: relative;
+}
+
+.glitch-text::before,
+.glitch-text::after {
+  content: attr(data-text);
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0.8;
+}
+
+.glitch-text::before {
+  color: #a855f7;
+  z-index: -1;
+  animation: glitch 0.3s cubic-bezier(.25, .46, .45, .94) both infinite;
+}
+
+.glitch-text::after {
+  color: #3b82f6;
+  z-index: -2;
+  animation: glitch 0.3s cubic-bezier(.25, .46, .45, .94) reverse both infinite;
+}
+
+@keyframes glitch {
+  0% { transform: translate(0) }
+  20% { transform: translate(-2px, 2px) }
+  40% { transform: translate(-2px, -2px) }
+  60% { transform: translate(2px, 2px) }
+  80% { transform: translate(2px, -2px) }
+  100% { transform: translate(0) }
 }
 

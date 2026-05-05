@@ -1,5 +1,6 @@
-import React, { useState, useMemo, useEffect, Component, ReactNode, ErrorInfo } from 'react';
+import React, { useState, useMemo, useEffect, Component, ReactNode, ErrorInfo, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { useNavigate } from 'react-router-dom';
 import * as Icons from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -9,6 +10,7 @@ import { AnalyticsPanel } from './components/AnalyticsPanel';
 import { INITIAL_HABITS, INITIAL_TASKS, ACHIEVEMENTS } from './constants';
 import { Habit, DayTasks, MentalState, HabitStatus, Theme, Achievement, HabitCategory, LayoutPreset, FontFamily } from './types';
 import { formatDateKey } from './lib/utils';
+import { getFileHandle, saveFileHandle, removeFileHandle, verifyPermission } from './lib/fileSync';
 
 import { AICoach } from './components/AICoach';
 import { AIChatCoach } from './components/AIChatCoach';
@@ -72,6 +74,8 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
 }
 
 function AppContent() {
+  const navigate = useNavigate();
+  const [user, setUser] = useState<any>(null);
   const [habits, setHabits] = useState<Habit[]>(() => {
     const saved = localStorage.getItem('momentum_habits');
     if (!saved) return INITIAL_HABITS;
@@ -141,13 +145,108 @@ function AppContent() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [exportingFormat, setExportingFormat] = useState<'csv' | 'json' | 'pdf' | null>(null);
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const [localFileHandle, setLocalFileHandle] = useState<FileSystemFileHandle | null>(null);
+  const [localFileName, setLocalFileName] = useState<string | null>(null);
+  const isMounted = useRef(true);
+  const pendingSaveTimeout = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    isMounted.current = true;
+    const loadHandle = async () => {
+      const handle = await getFileHandle();
+      if (handle && isMounted.current) {
+        setLocalFileHandle(handle);
+        setLocalFileName(handle.name);
+      }
+    };
+    loadHandle();
+    return () => { 
+      isMounted.current = false;
+      if (pendingSaveTimeout.current) clearTimeout(pendingSaveTimeout.current);
+    };
+  }, []);
+
+  // --- Fetch User Info ---
+  useEffect(() => {
+    let mounted = true;
+    const fetchUser = async () => {
+      try {
+        const res = await fetch('/api/auth/me');
+        if (!mounted) return;
+        if (res.ok) {
+          const contentType = res.headers.get("content-type");
+          if (contentType && contentType.includes("application/json")) {
+            const data = await res.json();
+            if (mounted) {
+              setUser(data.user);
+            }
+          }
+        }
+      } catch (err) {
+        if (mounted) console.error("Failed to fetch user:", err);
+      }
+    };
+    
+    fetchUser();
+    return () => { mounted = false; };
+  }, []);
+
+  // --- Local File Sync (Save) ---
+  useEffect(() => {
+    if (!localFileHandle) return;
+
+    const saveToFile = async () => {
+      try {
+        // Only attempt save if tab is active to avoid permission issues during background re-renders
+        if (document.visibilityState !== 'visible') return;
+
+        const hasPermission = await verifyPermission(localFileHandle, true);
+        if (!hasPermission) return;
+
+        const writable = await (localFileHandle as any).createWritable();
+        const data = {
+          habits, dayTasks, theme, layout, font, focusSessions, achievements,
+          lastUpdated: new Date().toISOString()
+        };
+        await writable.write(JSON.stringify(data, null, 2));
+        await writable.close();
+        console.log('[LocalSync] Auto-saved to local file');
+      } catch (e) {
+        console.warn('[LocalSync] Auto-save inhibited (requires user gesture for initial permission or file is locked)');
+      }
+    };
+
+    const timer = setTimeout(saveToFile, 3000);
+    return () => clearTimeout(timer);
+  }, [habits, dayTasks, theme, layout, font, focusSessions, achievements, localFileHandle]);
 
   // --- Global Error Handling ---
   useEffect(() => {
     const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+      // Prevent the default browser logging to avoid double console output
+      event.preventDefault();
+      // Stop other listeners from firing if we handle it here
+      event.stopImmediatePropagation();
+      
+      const reason = event.reason?.message || event.reason;
+      
+      // Filter out benign errors like Vite HMR failures or WebSocket disconnects
+      const reasonStr = String(reason || '').toLowerCase();
+      if (
+        reasonStr.includes('websocket') || 
+        reasonStr.includes('hmr') || 
+        reasonStr.includes('vite') ||
+        reasonStr.includes('failed to fetch') || // Common during server restarts
+        reasonStr.includes('load failed')
+      ) {
+        return;
+      }
+
       console.error('Momentum caught an unhandled promise rejection:', event.reason);
+      
+      const displayReason = reason || 'An unexpected background task failed';
       setNotification({
-        message: 'A background task failed. Please check your connection.',
+        message: `System Alert: ${displayReason}. Please check your connection.`,
         type: 'error'
       });
     };
@@ -177,14 +276,19 @@ function AppContent() {
       'Neon Dark': 'radial-gradient(circle at top left, #000000, #09090b, #18181b)',
       'Light Mode': 'radial-gradient(circle at top left, #f8fafc, #f1f5f9, #e2e8f0)',
       'Forest Green': 'radial-gradient(circle at top left, #064e3b, #065f46, #047857)',
-      'Darken Black': '#000000',
+      'Black Darken': '#000000',
       'Lighten White': '#ffffff',
     };
     document.body.style.background = themes[theme];
     if (theme === 'Light Mode' || theme === 'Lighten White') {
       document.body.classList.add('light-theme');
+      document.body.classList.remove('black-darken-theme');
+    } else if (theme === 'Black Darken') {
+      document.body.classList.remove('light-theme');
+      document.body.classList.add('black-darken-theme');
     } else {
       document.body.classList.remove('light-theme');
+      document.body.classList.remove('black-darken-theme');
     }
   }, [theme]);
 
@@ -195,7 +299,8 @@ function AppContent() {
       'Space Grotesk': 'font-space',
       'Outfit': 'font-outfit',
       'Playfair Display': 'font-serif',
-      'JetBrains Mono': 'font-mono'
+      'JetBrains Mono': 'font-mono',
+      'Tactic Sans': 'font-tactic'
     };
     
     // Remove all font classes
@@ -244,6 +349,64 @@ function AppContent() {
     }));
   };
 
+  const connectLocalFile = async () => {
+    try {
+      if (!('showDirectoryPicker' in window)) {
+        showNotification('File System Access API is not supported in this browser.', 'error');
+        return;
+      }
+
+      const dirHandle = await (window as any).showDirectoryPicker({
+        mode: 'readwrite'
+      });
+
+      if (dirHandle) {
+        // Automatically create a dedicated folder and a file
+        const momentumDirHandle = await dirHandle.getDirectoryHandle('Momentum_Sync', { create: true });
+        const fileHandle = await momentumDirHandle.getFileHandle('momentum_data.json', { create: true });
+        
+        await saveFileHandle(fileHandle);
+        setLocalFileHandle(fileHandle);
+        setLocalFileName('Momentum_Sync/momentum_data.json');
+        
+        // Load data from file
+        const file = await fileHandle.getFile();
+        const content = await file.text();
+        if (content) {
+          try {
+            const data = JSON.parse(content);
+            if (data.habits) setHabits(data.habits);
+            if (data.dayTasks) setDayTasks(data.dayTasks);
+            if (data.theme) setTheme(data.theme);
+            if (data.layout) setLayout(data.layout);
+            if (data.font) setFont(data.font);
+            if (data.focusSessions !== undefined) setFocusSessions(data.focusSessions);
+            if (data.achievements) setAchievements(data.achievements);
+            showNotification(`Real-time sync established with Momentum_Sync folder.`, 'success');
+          } catch (e) {
+            showNotification('New sync file created and connected.', 'success');
+          }
+        } else {
+            showNotification('New sync file created and connected.', 'success');
+        }
+      }
+    } catch (e: any) {
+      if (e.name === 'SecurityError') {
+        showNotification('Action required: Open app in a new tab to bypass preview security.', 'error');
+      } else if (e.name !== 'AbortError') {
+        console.error('Directory pick failed', e);
+        showNotification('Failed to access local directory.', 'error');
+      }
+    }
+  };
+
+  const disconnectLocalFile = async () => {
+    await removeFileHandle();
+    setLocalFileHandle(null);
+    setLocalFileName(null);
+    showNotification('Local sync disabled.', 'success');
+  };
+
   const addHabit = (name: string, category?: HabitCategory) => {
     const newHabit: Habit = {
       id: Date.now().toString(),
@@ -277,6 +440,7 @@ function AppContent() {
       setExportingFormat(format);
       // Simulate processing delay
       await new Promise(resolve => setTimeout(resolve, 1200));
+      if (!isMounted.current) return;
 
       const data = { habits, dayTasks, focusSessions, date: new Date().toISOString() };
       
@@ -362,12 +526,14 @@ function AppContent() {
         
         doc.save(`momentum_report_${new Date().toISOString().split('T')[0]}.pdf`);
       }
-      showNotification('Report exported successfully!', 'success');
+      if (isMounted.current) showNotification('Report exported successfully!', 'success');
     } catch (err) {
-      console.error("Export failed:", err);
-      showNotification('Failed to export report. Please try again.', 'error');
+      if (isMounted.current) {
+        console.error("Export failed:", err);
+        showNotification('Failed to export report. Please try again.', 'error');
+      }
     } finally {
-      setExportingFormat(null);
+      if (isMounted.current) setExportingFormat(null);
     }
   };
 
@@ -379,9 +545,10 @@ function AppContent() {
   const handleImport = (file: File) => {
     const reader = new FileReader();
     reader.onerror = () => {
-      showNotification('Failed to read the file. Please try again.', 'error');
+      if (isMounted.current) showNotification('Failed to read the file. Please try again.', 'error');
     };
     reader.onload = (e) => {
+      if (!isMounted.current) return;
       const content = e.target?.result as string;
       if (file.name.endsWith('.json')) {
         try {
@@ -549,7 +716,7 @@ function AppContent() {
   return (
     <div className={`relative text-white ${(theme === 'Light Mode' || theme === 'Lighten White') ? 'text-slate-900' : ''}`}>
       {/* Background Visuals */}
-      {(theme !== 'Darken Black' && theme !== 'Lighten White') && (
+      {(theme !== 'Black Darken' && theme !== 'Lighten White') && (
         <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
           <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-cyan-500/10 blur-[120px] rounded-full" />
           <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-purple-500/10 blur-[120px] rounded-full" />
@@ -564,17 +731,57 @@ function AppContent() {
           animate={{ opacity: 1, y: 0 }}
           className="flex flex-col md:flex-row md:items-center justify-between gap-6"
         >
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-cyan-500 to-purple-500 flex items-center justify-center shadow-lg shadow-cyan-500/20">
-              <Icons.Zap className="w-6 h-6 text-white fill-white" />
+          <div className="flex items-center gap-6">
+            <div className="relative group">
+              <div className="relative w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-600 to-blue-700 flex items-center justify-center shadow-xl shadow-indigo-500/30 overflow-hidden">
+                {user?.profile_pic ? (
+                  <img src={user.profile_pic} alt="Profile" className="absolute inset-0 w-full h-full object-cover z-20" referrerPolicy="no-referrer" />
+                ) : (
+                  <div className="relative w-10 h-10 flex items-center justify-center z-10">
+                    {/* Unique "Momentum Hex" Mark */}
+                    <div 
+                      className="absolute left-0 w-5 h-8 bg-white/40"
+                      style={{ clipPath: 'polygon(100% 0, 100% 100%, 0 75%, 0 25%)' }}
+                    />
+                    {/* Right Half Hex (Shifted Up) */}
+                    <div 
+                      className="absolute right-0 w-5 h-8 bg-white -translate-y-[6px] shadow-lg"
+                      style={{ clipPath: 'polygon(0 0, 100% 25%, 100% 75%, 0 100%)' }}
+                    />
+                  </div>
+                )}
+              </div>
+              <motion.div 
+                animate={{ scale: [1, 1.2, 1], opacity: [0.5, 1, 0.5] }}
+                transition={{ duration: 2, repeat: Infinity }}
+                className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-emerald-500 border-2 border-slate-950" 
+              />
             </div>
             <div className="space-y-1">
-              <h1 className="text-3xl font-syne font-extrabold tracking-tight bg-gradient-to-r from-cyan-400 to-purple-400 bg-clip-text text-transparent">
-                Momentum .
-              </h1>
-              <p className="text-slate-400 font-medium flex items-center gap-2">
-                <Icons.Calendar className="w-4 h-4" />
-                {monthYear}
+              <div className="flex items-center gap-3">
+                <h1 className="text-3xl font-syne font-black tracking-tight bg-gradient-to-r from-cyan-400 to-purple-400 bg-clip-text text-transparent">
+                  MOMENTUM .
+                </h1>
+                {user?.username && (
+                  <span className="px-2 py-0.5 rounded-md bg-white/5 border border-white/10 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                    ID: {user.username}
+                  </span>
+                )}
+              </div>
+              <p className="text-slate-400 font-medium flex items-center gap-3">
+                <span className="flex items-center gap-2">
+                  <Icons.Calendar className="w-4 h-4" />
+                  {monthYear}
+                </span>
+                <span className="w-px h-3 bg-slate-700" />
+                <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest ${
+                  localFileHandle ? 'text-emerald-400 bg-emerald-400/5 border border-emerald-500/20 shadow-[0_0_10px_rgba(52,211,153,0.1)]' : 'text-slate-500 bg-slate-500/5 border border-slate-500/10'
+                }`}>
+                  <span className={`w-1 h-1 rounded-full ${
+                    localFileHandle ? 'bg-emerald-400 animate-pulse' : 'bg-slate-500'
+                  }`} />
+                  {localFileHandle ? 'Local sync' : 'Offline Mode'}
+                </span>
               </p>
             </div>
           </div>
@@ -610,14 +817,17 @@ function AppContent() {
             <motion.button 
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              onClick={async () => {
-                try {
-                  await fetch('/api/auth/logout', { method: 'POST' });
-                } catch (err) {
-                  console.error("Logout failed:", err);
-                } finally {
-                  window.location.href = '/login';
-                }
+              onClick={() => {
+                const logout = async () => {
+                  try {
+                    await fetch('/api/auth/logout', { method: 'POST' });
+                    navigate('/login');
+                  } catch (err) {
+                    console.error("Logout failed:", err);
+                    window.location.href = '/login';
+                  }
+                };
+                logout().catch(err => console.error("Logout unhandled rejection:", err));
               }}
               className="px-4 py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 transition-all text-sm font-bold text-rose-400 flex items-center gap-2"
             >
@@ -849,9 +1059,19 @@ function AppContent() {
         onLayoutChange={setLayout}
         currentFont={font}
         onFontChange={setFont}
-        onExport={handleExport}
+        onExport={(format) => {
+          const p = handleExport(format) as any;
+          if (p instanceof Promise) p.catch(err => console.error("handleExport unhandled rejection:", err));
+        }}
         exportingFormat={exportingFormat}
-        onImport={handleImport}
+        onImport={(file) => {
+          const p = handleImport(file) as any;
+          if (p instanceof Promise) p.catch(err => console.error("handleImport unhandled rejection:", err));
+        }}
+        syncStatus={localFileHandle ? 'connected' : 'not_connected'}
+        onConnectFile={connectLocalFile}
+        onDisconnectFile={disconnectLocalFile}
+        fileName={localFileName}
       />
 
       {/* Professional Notification Toast */}
@@ -893,13 +1113,4 @@ export default function App() {
       <AppContent />
     </ErrorBoundary>
   );
-}
-
-// Global Error Prevention
-if (typeof window !== 'undefined') {
-  window.addEventListener('unhandledrejection', (event) => {
-    console.error('Unhandled Promise Rejection:', event.reason);
-    // Prevent default browser handling (optional)
-    // event.preventDefault();
-  });
 }

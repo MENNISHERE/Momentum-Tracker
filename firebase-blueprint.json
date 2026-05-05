@@ -1,0 +1,51 @@
+{
+  "entities": {
+    "UserData": {
+      "title": "User Data",
+      "description": "Stores user habits, tasks, and settings",
+      "type": "object",
+      "properties": {
+        "habits": {
+          "type": "array",
+          "description": "List of user habits"
+        },
+        "dayTasks": {
+          "type": "array",
+          "description": "List of daily tasks"
+        },
+        "theme": {
+          "type": "string",
+          "description": "Selected theme"
+        },
+        "layout": {
+          "type": "string",
+          "description": "Selected layout"
+        },
+        "font": {
+          "type": "string",
+          "description": "Selected font"
+        },
+        "focusSessions": {
+          "type": "integer",
+          "description": "Number of focus sessions completed"
+        },
+        "achievements": {
+          "type": "array",
+          "description": "List of unlocked achievements"
+        },
+        "lastUpdated": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last sync timestamp"
+        }
+      },
+      "required": ["habits", "dayTasks", "theme", "layout", "font", "focusSessions", "achievements", "lastUpdated"]
+    }
+  },
+  "firestore": {
+    "/user_data/{userId}": {
+      "schema": "UserData",
+      "description": "User-specific data and settings"
+    }
+  }
+}

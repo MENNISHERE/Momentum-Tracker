@@ -48,87 +48,117 @@ export const AnalyticsPanel: React.FC<AnalyticsPanelProps> = ({ habits, dayTasks
     <motion.div 
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
+      whileHover={{ 
+        y: -5,
+        borderColor: "rgba(168, 85, 247, 0.3)",
+        backgroundColor: "rgba(255, 255, 255, 0.02)"
+      }}
       transition={{ delay: 0.3 }}
-      className="glass-card p-6"
+      className="glass-card p-8 bg-white/[0.01] border-emerald-500/10 relative overflow-hidden group glow-border"
     >
-      <h2 className="text-xl font-bold flex items-center gap-2 mb-8">
-        <Icons.BarChart3 className="w-5 h-5 text-emerald-400" />
-        Analysis
-      </h2>
+      {/* Background glow */}
+      <div className="absolute -right-12 -top-12 w-48 h-48 bg-emerald-500/5 blur-3xl rounded-full group-hover:bg-emerald-500/10 transition-colors" />
 
-      <div className="space-y-10">
+      <div className="space-y-1 mb-10 relative z-10">
+        <h2 className="text-[10px] font-black text-emerald-500 uppercase tracking-[0.2em] flex items-center gap-2">
+          <Icons.BarChart3 className="w-4 h-4 animate-pulse" />
+          Analytics Protocol
+        </h2>
+        <p className="text-[8px] font-bold text-slate-600 uppercase tracking-[0.3em] ml-6">
+          System performance metrics
+        </p>
+      </div>
+
+      <div className="space-y-12 relative z-10">
         {/* Weekly Score Card */}
-        <div className="p-4 rounded-2xl bg-gradient-to-br from-yellow-500/10 to-orange-500/10 border border-yellow-500/20 space-y-3">
-          <div className="flex items-center justify-between">
-            <h3 className="text-xs font-bold text-yellow-500 uppercase tracking-widest">Weekly Score</h3>
-            <span className="text-2xl font-black text-white">{Math.round(weeklyScore)} / 100</span>
+        <div className="p-6 rounded-2xl bg-black border border-yellow-500/10 space-y-4 shadow-inner relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-yellow-500/5 blur-2xl rounded-full" />
+          <div className="flex items-center justify-between relative z-10">
+            <h3 className="text-[9px] font-black text-yellow-500 uppercase tracking-widest">Efficiency Score</h3>
+            <span className="text-3xl font-black text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.1)]">{Math.round(weeklyScore)} / 100</span>
           </div>
-          <div className="w-full h-2 bg-white/5 rounded-full overflow-hidden">
+          <div className="w-full h-1 bg-slate-900 rounded-full overflow-hidden border border-white/5 relative z-10">
             <motion.div 
               initial={{ width: 0 }}
               animate={{ width: `${weeklyScore}%` }}
-              className="h-full bg-gradient-to-r from-yellow-500 to-orange-500"
+              className="h-full bg-gradient-to-r from-yellow-600 to-yellow-400 shadow-[0_0_10px_rgba(234,179,8,0.3)]"
             />
           </div>
-          <p className="text-[10px] text-slate-500 font-medium leading-relaxed">
-            Score based on 50% Habits, 30% Tasks, and 20% Focus.
-          </p>
+          <div className="flex justify-between items-center relative z-10">
+            <p className="text-[8px] text-slate-600 font-black uppercase tracking-widest leading-relaxed">
+              50% HABIT • 30% TASK • 20% FOCUS
+            </p>
+            <div className="flex gap-1">
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className={`w-1 h-1 rounded-full ${i < Math.floor(weeklyScore / 20) ? 'bg-yellow-500' : 'bg-slate-800'}`} />
+              ))}
+            </div>
+          </div>
         </div>
 
         {/* Habit Completion Bar Chart */}
-        <div className="space-y-4">
-          <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest">Habit Completion</h3>
-          <div className="h-[180px]">
+        <div className="space-y-6">
+          <h3 className="text-[9px] font-black text-slate-600 uppercase tracking-[0.2em]">Habit Completion</h3>
+          <div className="h-[180px] bg-black rounded-xl p-4 border border-white/5">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={habitData}>
                 <XAxis dataKey="name" hide />
                 <Tooltip 
-                  cursor={{ fill: '#ffffff05' }}
-                  contentStyle={{ backgroundColor: '#1e1b4b', border: '1px solid #ffffff20', borderRadius: '4px' }}
+                  cursor={{ fill: 'rgba(255, 255, 255, 0.02)' }}
+                  contentStyle={{ 
+                    backgroundColor: '#000000', 
+                    border: '1px solid rgba(255,255,255,0.05)', 
+                    borderRadius: '8px',
+                    fontSize: '9px',
+                    fontWeight: '900',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.1em'
+                  }}
                 />
-                <Bar dataKey="completed" fill="#22d3ee" radius={[2, 2, 0, 0]} />
+                <Bar dataKey="completed" fill="#a855f7" radius={[2, 2, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
 
         {/* Weekly Productivity Bar */}
-        <div className="space-y-4">
-          <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest">Productivity</h3>
-          <div className="space-y-3">
+        <div className="space-y-6">
+          <h3 className="text-[9px] font-black text-slate-600 uppercase tracking-[0.2em]">Productivity</h3>
+          <div className="space-y-4">
             <div className="flex justify-between items-end">
-              <span className="text-2xl font-black text-emerald-400">{Math.round(taskProgress)}%</span>
-              <span className="text-[10px] text-slate-500 font-bold">{completedTasks} / {totalTasks} TASKS</span>
+              <span className="text-4xl font-black text-emerald-400 drop-shadow-[0_0_10px_rgba(16,185,129,0.2)]">{Math.round(taskProgress)}%</span>
+              <span className="text-[9px] text-slate-600 font-black uppercase tracking-widest">{completedTasks} / {totalTasks} UNIT</span>
             </div>
-            <div className="w-full h-4 bg-white/5 rounded-full overflow-hidden flex">
+            <div className="w-full h-1 bg-black rounded-full overflow-hidden border border-white/5">
               <motion.div 
                 initial={{ width: 0 }}
                 animate={{ width: `${taskProgress}%` }}
-                className="h-full bg-emerald-500"
+                className="h-full bg-gradient-to-r from-emerald-600 to-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.3)]"
               />
             </div>
           </div>
         </div>
 
         {/* Mindset Distribution (Linear Gauges) */}
-        <div className="space-y-4">
-          <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest">Mindset Distribution</h3>
-          <div className="space-y-4">
+        <div className="space-y-6">
+          <h3 className="text-[9px] font-black text-slate-600 uppercase tracking-[0.2em]">Mindset Distribution</h3>
+          <div className="space-y-5">
             {[
-              { label: 'Mood', value: avgMood, color: 'bg-rose-500' },
-              { label: 'Motivation', value: avgMotivation, color: 'bg-amber-500' },
-              { label: 'Focus', value: avgFocus, color: 'bg-cyan-500' }
+              { label: 'Mood', value: avgMood, color: 'from-rose-600 to-rose-400', shadow: 'rgba(244,63,94,0.3)' },
+              { label: 'Motivation', value: avgMotivation, color: 'from-amber-600 to-amber-400', shadow: 'rgba(245,158,11,0.3)' },
+              { label: 'Focus', value: avgFocus, color: 'from-cyan-600 to-cyan-400', shadow: 'rgba(6,182,212,0.3)' }
             ].map((item) => (
-              <div key={item.label} className="space-y-1.5">
-                <div className="flex justify-between text-[10px] font-bold uppercase tracking-wider">
-                  <span className="text-slate-400">{item.label}</span>
+              <div key={item.label} className="space-y-2">
+                <div className="flex justify-between text-[9px] font-black uppercase tracking-[0.15em]">
+                  <span className="text-slate-600">{item.label}</span>
                   <span className="text-white">{item.value.toFixed(1)}</span>
                 </div>
-                <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
+                <div className="w-full h-1 bg-black rounded-full overflow-hidden border border-white/5">
                   <motion.div 
                     initial={{ width: 0 }}
                     animate={{ width: `${(item.value / 10) * 100}%` }}
-                    className={`h-full ${item.color}`}
+                    className={`h-full bg-gradient-to-r ${item.color}`}
+                    style={{ boxShadow: `0 0 10px ${item.shadow}` }}
                   />
                 </div>
               </div>
@@ -137,16 +167,16 @@ export const AnalyticsPanel: React.FC<AnalyticsPanelProps> = ({ habits, dayTasks
         </div>
 
         {/* Average Mood Score */}
-        <div className="pt-8 border-t border-white/5 flex flex-col items-center justify-center text-center space-y-3">
-          <span className="text-xs font-bold text-slate-500 uppercase tracking-[0.2em]">Average Mood Score</span>
-          <span className="text-6xl font-black text-rose-500 drop-shadow-[0_0_15px_rgba(244,63,94,0.3)]">
+        <div className="pt-10 border-t border-white/5 flex flex-col items-center justify-center text-center space-y-4">
+          <span className="text-[9px] font-black text-slate-600 uppercase tracking-[0.3em]">Average Mood Score</span>
+          <span className="text-7xl font-black text-rose-500 drop-shadow-[0_0_20px_rgba(244,63,94,0.4)]">
             {avgMood.toFixed(1)}
           </span>
-          <div className="flex gap-1.5">
+          <div className="flex gap-2">
             {[...Array(10)].map((_, i) => (
               <div 
                 key={i} 
-                className={`w-2 h-2 rounded-sm ${i < Math.round(avgMood) ? 'bg-rose-500' : 'bg-white/10'}`} 
+                className={`w-2.5 h-2.5 rounded-sm transition-all duration-500 ${i < Math.round(avgMood) ? 'bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.5)]' : 'bg-black border border-white/5'}`} 
               />
             ))}
           </div>

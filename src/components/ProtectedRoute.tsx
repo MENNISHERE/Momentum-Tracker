@@ -13,28 +13,39 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   const location = useLocation();
 
   useEffect(() => {
+    let mounted = true;
     const checkAuth = async (retryCount = 0) => {
       try {
         const res = await fetch('/api/auth/me');
+        if (!mounted) return;
+        
         if (res.ok) {
           setAuthenticated(true);
           setLoading(false);
         } else {
           // If 404, the server might be restarting, retry a few times
           if (res.status === 404 && retryCount < 3) {
-            setTimeout(() => checkAuth(retryCount + 1), 2000);
+            setTimeout(() => {
+              if (mounted) checkAuth(retryCount + 1).catch(console.error);
+            }, 2000);
             return;
           }
           const data = await res.json().catch(() => ({}));
-          if (data.revoked) {
+          if (data.revoked && mounted) {
             setRevoked(true);
           }
-          setAuthenticated(false);
-          setLoading(false);
+          if (mounted) {
+            setAuthenticated(false);
+            setLoading(false);
+          }
         }
       } catch (err) {
+        if (!mounted) return;
+        console.error("Auth check error:", err);
         if (retryCount < 3) {
-          setTimeout(() => checkAuth(retryCount + 1), 2000);
+          setTimeout(() => {
+            if (mounted) checkAuth(retryCount + 1).catch(console.error);
+          }, 2000);
         } else {
           setAuthenticated(false);
           setLoading(false);
@@ -42,7 +53,15 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
       }
     };
 
-    checkAuth();
+    checkAuth().catch(err => {
+      console.error("Initial checkAuth failed:", err);
+      if (mounted) {
+        setAuthenticated(false);
+        setLoading(false);
+      }
+    });
+
+    return () => { mounted = false; };
   }, [location.pathname]);
 
   if (loading) {

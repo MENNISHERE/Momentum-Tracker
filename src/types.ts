@@ -40,11 +40,11 @@ export interface Achievement {
   requirement: string;
 }
 
-export type Theme = 'Dark' | 'Midnight Blue' | 'Purple Gradient' | 'Neon Dark' | 'Light Mode' | 'Forest Green' | 'Darken Black' | 'Lighten White';
+export type Theme = 'Dark' | 'Midnight Blue' | 'Purple Gradient' | 'Neon Dark' | 'Light Mode' | 'Forest Green' | 'Black Darken' | 'Lighten White';
 
 export type LayoutPreset = 'Standard' | 'Focus' | 'Habit-Centric' | 'Analytics' | 'Minimalist';
 
-export type FontFamily = 'Inter' | 'Space Grotesk' | 'Outfit' | 'Playfair Display' | 'JetBrains Mono';
+export type FontFamily = 'Inter' | 'Space Grotesk' | 'Outfit' | 'Playfair Display' | 'JetBrains Mono' | 'Tactic Sans';
 
 export interface UserSettings {
   theme: Theme;

@@ -24,6 +24,12 @@ export const AIChatCoach: React.FC<AIChatCoachProps> = ({ habits, tasks, mentalS
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const isMounted = useRef(true);
+
+  useEffect(() => {
+    isMounted.current = true;
+    return () => { isMounted.current = false; };
+  }, []);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -40,7 +46,11 @@ export const AIChatCoach: React.FC<AIChatCoachProps> = ({ habits, tasks, mentalS
     setLoading(true);
 
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+      const apiKey = import.meta.env.VITE_GEMINI_API_KEY || (typeof process !== 'undefined' ? process.env.GEMINI_API_KEY : undefined);
+      if (!apiKey) {
+        throw new Error("API Key Missing. To enable the AI Coach, please add your Gemini API Key in the Settings (gear icon) → Secrets section. Set the name to VITE_GEMINI_API_KEY and the value to your key.");
+      }
+      const ai = new GoogleGenAI({ apiKey });
       const model = "gemini-3.1-flash-lite-preview";
       
       const summary = {
@@ -85,12 +95,18 @@ export const AIChatCoach: React.FC<AIChatCoachProps> = ({ habits, tasks, mentalS
       });
 
       const response = await chat.sendMessage({ message: userMessage });
-      setMessages(prev => [...prev, { role: 'model', text: response.text || "I'm processing your data. Let's focus on your next small win." }]);
+      if (isMounted.current) {
+        setMessages(prev => [...prev, { role: 'model', text: response.text || "I'm processing your data. Let's focus on your next small win." }]);
+      }
     } catch (error) {
       console.error("AI Chat Error:", error);
-      setMessages(prev => [...prev, { role: 'model', text: "I'm having trouble connecting to the momentum grid right now. Focus on your most important habit for the next 10 minutes." }]);
+      if (isMounted.current) {
+        setMessages(prev => [...prev, { role: 'model', text: "I'm having trouble connecting to the momentum grid right now. Focus on your most important habit for the next 10 minutes." }]);
+      }
     } finally {
-      setLoading(false);
+      if (isMounted.current) {
+        setLoading(false);
+      }
     }
   };
 
@@ -98,62 +114,66 @@ export const AIChatCoach: React.FC<AIChatCoachProps> = ({ habits, tasks, mentalS
     <>
       {/* Floating Action Button */}
       <motion.button
-        whileHover={{ scale: 1.1 }}
+        whileHover={{ scale: 1.1, rotate: 5, boxShadow: "0 0 30px rgba(79, 70, 229, 0.4)" }}
         whileTap={{ scale: 0.9 }}
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-8 right-8 z-50 w-14 h-14 rounded-full bg-indigo-600 text-white shadow-2xl shadow-indigo-500/40 flex items-center justify-center border border-indigo-400/20"
+        className="fixed bottom-8 right-8 z-50 w-16 h-16 rounded-2xl bg-indigo-600 text-white shadow-2xl flex items-center justify-center border border-indigo-400/30 group overflow-hidden"
       >
-        <Icons.MessageSquare className="w-6 h-6" />
-        <div className="absolute -top-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full border-2 border-slate-900 animate-pulse" />
+        <div className="absolute inset-0 bg-gradient-to-br from-indigo-500 to-purple-600 opacity-0 group-hover:opacity-100 transition-opacity" />
+        <Icons.MessageSquare className="w-7 h-7 relative z-10" />
+        <div className="absolute -top-1 -right-1 w-5 h-5 bg-emerald-500 rounded-full border-4 border-slate-950 animate-pulse z-20" />
       </motion.button>
 
       {/* Chat Window */}
       <AnimatePresence>
         {isOpen && (
           <motion.div
-            initial={{ opacity: 0, scale: 0.9, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.9, y: 20 }}
-            className="fixed bottom-24 right-8 z-50 w-[400px] h-[600px] glass-card flex flex-col shadow-2xl border-indigo-500/20 overflow-hidden"
+            initial={{ opacity: 0, scale: 0.9, y: 40, x: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0, x: 0 }}
+            exit={{ opacity: 0, scale: 0.9, y: 40, x: 20 }}
+            className="fixed bottom-28 right-8 z-50 w-[420px] h-[650px] glass-card flex flex-col shadow-[0_20px_60px_-15px_rgba(0,0,0,0.7)] border-indigo-500/20 overflow-hidden bg-slate-950/90 backdrop-blur-2xl rounded-[2rem]"
           >
             {/* Header */}
-            <div className="p-4 border-b border-white/10 bg-indigo-600/10 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-indigo-500/20 text-indigo-400">
-                  <Icons.Sparkles className="w-5 h-5" />
+            <div className="p-6 border-b border-white/5 bg-indigo-600/5 flex items-center justify-between relative overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/5 to-transparent pointer-events-none" />
+              <div className="flex items-center gap-4 relative z-10">
+                <div className="p-3 rounded-2xl bg-indigo-500/20 text-indigo-400 border border-indigo-500/20 shadow-inner">
+                  <Icons.Sparkles className="w-6 h-6 animate-pulse" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-sm tracking-tight">Momentum AI Coach</h3>
-                  <div className="flex items-center gap-1.5">
-                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                    <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Analyzing Performance</span>
+                  <h3 className="font-black text-[11px] uppercase tracking-[0.2em] text-white">Momentum AI Coach</h3>
+                  <div className="flex items-center gap-2 mt-1">
+                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+                    <span className="text-[9px] text-slate-500 font-black uppercase tracking-widest">Analyzing Performance</span>
                   </div>
                 </div>
               </div>
-              <button 
+              <motion.button 
+                whileHover={{ rotate: 90, scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
                 onClick={() => setIsOpen(false)}
-                className="p-2 hover:bg-white/5 rounded-lg transition-colors text-slate-400"
+                className="p-2.5 hover:bg-white/5 rounded-xl transition-colors text-slate-500 hover:text-white border border-transparent hover:border-white/10"
               >
                 <Icons.X className="w-5 h-5" />
-              </button>
+              </motion.button>
             </div>
 
             {/* Messages */}
             <div 
               ref={scrollRef}
-              className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-hide"
+              className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-hide bg-slate-950/20"
             >
               {messages.map((msg, idx) => (
                 <motion.div
                   key={idx}
-                  initial={{ opacity: 0, x: msg.role === 'user' ? 10 : -10 }}
-                  animate={{ opacity: 1, x: 0 }}
+                  initial={{ opacity: 0, y: 10, x: msg.role === 'user' ? 10 : -10 }}
+                  animate={{ opacity: 1, y: 0, x: 0 }}
                   className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                 >
-                  <div className={`max-w-[85%] p-3 rounded-2xl text-sm ${
+                  <div className={`max-w-[85%] p-4 rounded-2xl text-[13px] leading-relaxed shadow-lg ${
                     msg.role === 'user' 
-                      ? 'bg-indigo-600 text-white rounded-tr-none' 
-                      : 'bg-white/5 text-slate-200 border border-white/10 rounded-tl-none'
+                      ? 'bg-indigo-600 text-white rounded-tr-none font-medium border border-indigo-400/30' 
+                      : 'bg-slate-900/80 text-slate-200 border border-white/5 rounded-tl-none font-medium'
                   }`}>
                     {msg.text}
                   </div>
@@ -161,31 +181,35 @@ export const AIChatCoach: React.FC<AIChatCoachProps> = ({ habits, tasks, mentalS
               ))}
               {loading && (
                 <div className="flex justify-start">
-                  <div className="bg-white/5 p-3 rounded-2xl rounded-tl-none border border-white/10">
-                    <Icons.Loader2 className="w-4 h-4 animate-spin text-indigo-400" />
+                  <div className="bg-slate-900/80 p-4 rounded-2xl rounded-tl-none border border-white/5 shadow-lg">
+                    <Icons.Loader2 className="w-5 h-5 animate-spin text-indigo-400" />
                   </div>
                 </div>
               )}
             </div>
 
             {/* Input */}
-            <div className="p-4 border-t border-white/10 bg-white/5">
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleSend()}
-                  placeholder="Ask your coach anything..."
-                  className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-indigo-500/50 transition-colors"
-                />
-                <button
-                  onClick={handleSend}
+            <div className="p-6 border-t border-white/5 bg-slate-950/50">
+              <div className="flex items-center gap-3">
+                <div className="flex-1 relative group">
+                  <input
+                    type="text"
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && handleSend().catch(err => console.error("handleSend unhandled rejection:", err))}
+                    placeholder="Ask your coach anything..."
+                    className="w-full bg-slate-900/80 border border-white/10 rounded-2xl px-5 py-3.5 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/20 transition-all shadow-inner"
+                  />
+                </div>
+                <motion.button
+                  whileHover={{ scale: 1.05, x: 2 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => handleSend().catch(err => console.error("handleSend unhandled rejection:", err))}
                   disabled={loading || !input.trim()}
-                  className="p-2 rounded-xl bg-indigo-600 text-white disabled:opacity-50 hover:bg-indigo-500 transition-colors"
+                  className="p-4 rounded-2xl bg-indigo-600 text-white disabled:opacity-50 hover:bg-indigo-500 transition-all shadow-lg shadow-indigo-500/20 border border-indigo-400/30"
                 >
-                  <Icons.Send className="w-4 h-4" />
-                </button>
+                  <Icons.Send className="w-5 h-5 fill-white" />
+                </motion.button>
               </div>
             </div>
           </motion.div>

@@ -15,6 +15,10 @@ interface SettingsModalProps {
   onExport: (format: 'csv' | 'json' | 'pdf') => void;
   exportingFormat: 'csv' | 'json' | 'pdf' | null;
   onImport: (file: File) => void;
+  syncStatus: 'connected' | 'not_connected';
+  onConnectFile: () => void;
+  onDisconnectFile: () => void;
+  fileName: string | null;
 }
 
 const THEMES: { name: Theme; color: string }[] = [
@@ -24,7 +28,7 @@ const THEMES: { name: Theme; color: string }[] = [
   { name: 'Neon Dark', color: 'bg-black' },
   { name: 'Light Mode', color: 'bg-slate-50' },
   { name: 'Forest Green', color: 'bg-emerald-950' },
-  { name: 'Darken Black', color: 'bg-black' },
+  { name: 'Black Darken', color: 'bg-black' },
   { name: 'Lighten White', color: 'bg-white' },
 ];
 
@@ -42,6 +46,7 @@ const FONTS: { name: FontFamily; class: string }[] = [
   { name: 'Outfit', class: 'font-outfit' },
   { name: 'Playfair Display', class: 'font-serif' },
   { name: 'JetBrains Mono', class: 'font-mono' },
+  { name: 'Tactic Sans', class: 'font-tactic' },
 ];
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({ 
@@ -55,7 +60,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onFontChange,
   onExport,
   exportingFormat,
-  onImport
+  onImport,
+  syncStatus,
+  onConnectFile,
+  onDisconnectFile,
+  fileName
 }) => {
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
@@ -252,8 +261,60 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               </div>
 
               <div className="pt-6 border-t border-white/5">
-                <p className="text-[10px] text-slate-500 text-center font-medium">
-                  Momentum v2.0.0 • All data is stored locally on your device.
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2 mb-4">
+                  <Icons.HardDrive className="w-3 h-3" />
+                  Local File Sync
+                </label>
+                <div className={`p-4 rounded-xl border flex flex-col gap-4 ${
+                  syncStatus === 'connected' ? 'bg-emerald-500/5 border-emerald-500/20' : 'bg-slate-500/5 border-white/5'
+                }`}>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-2 h-2 rounded-full ${
+                        syncStatus === 'connected' ? 'bg-emerald-400 animate-pulse' : 'bg-slate-500'
+                      }`} />
+                      <div className="flex flex-col">
+                        <span className={`text-sm font-bold ${
+                          syncStatus === 'connected' ? 'text-emerald-400' : 'text-slate-400'
+                        }`}>
+                          {syncStatus === 'connected' ? 'Local Sync Active' : 'Not Connected'}
+                        </span>
+                        <span className="text-[10px] text-slate-500 font-medium">
+                          {syncStatus === 'connected' ? `Connected: ${fileName}` : 'Connect a local folder to auto-sync your data'}
+                        </span>
+                      </div>
+                    </div>
+                    {syncStatus === 'connected' ? (
+                      <button 
+                        onClick={onDisconnectFile}
+                        className="text-[10px] font-bold text-rose-500 hover:text-rose-400 uppercase tracking-widest transition-colors px-3 py-1 bg-rose-500/10 rounded-sm"
+                      >
+                        Disconnect
+                      </button>
+                    ) : (
+                      <button 
+                        onClick={onConnectFile}
+                        className="text-[10px] font-bold text-cyan-500 hover:text-cyan-400 uppercase tracking-widest transition-colors px-3 py-1 bg-cyan-500/10 rounded-sm"
+                      >
+                        Connect
+                      </button>
+                    )}
+                  </div>
+
+                  {syncStatus === 'connected' && (
+                    <div className="bg-emerald-500/10 rounded-lg p-3 border border-emerald-500/10 backdrop-blur-md">
+                      <p className="text-[10px] text-emerald-400/80 leading-relaxed">
+                        <Icons.CheckCircle2 className="w-3 h-3 inline mr-1 mb-0.5" />
+                        Autosave active. All changes are being written to your local file in real-time.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="pt-6 border-t border-white/5">
+                <p className="text-[10px] text-slate-500 text-center font-medium uppercase tracking-widest">
+                  Momentum v2.0.0 • Private Local-First Storage.
                 </p>
               </div>
             </div>
