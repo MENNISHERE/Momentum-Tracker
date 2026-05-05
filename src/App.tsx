@@ -171,7 +171,8 @@ function AppContent() {
     let mounted = true;
     const fetchUser = async () => {
       try {
-        const res = await fetch('/api/auth/me');
+        const apiUrl = import.meta.env.VITE_API_URL || '';
+        const res = await fetch(`${apiUrl}/api/auth/me`);
         if (!mounted) return;
         if (res.ok) {
           const contentType = res.headers.get("content-type");
@@ -820,7 +821,8 @@ function AppContent() {
               onClick={() => {
                 const logout = async () => {
                   try {
-                    await fetch('/api/auth/logout', { method: 'POST' });
+                    const apiUrl = import.meta.env.VITE_API_URL || '';
+                    await fetch(`${apiUrl}/api/auth/logout`, { method: 'POST' });
                     navigate('/login');
                   } catch (err) {
                     console.error("Logout failed:", err);

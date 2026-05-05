@@ -33,7 +33,8 @@ export const Login: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch('/api/auth/whop-session', {
+      const apiUrl = import.meta.env.VITE_API_URL || '';
+      const res = await fetch(`${apiUrl}/api/auth/whop-session`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ membershipId: id }),
@@ -63,7 +64,8 @@ export const Login: React.FC = () => {
     setError(null);
 
     try {
-      const res = await fetch('/api/auth/login', {
+      const apiUrl = import.meta.env.VITE_API_URL || '';
+      const res = await fetch(`${apiUrl}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),
